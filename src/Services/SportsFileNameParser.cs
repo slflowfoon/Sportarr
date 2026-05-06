@@ -13,6 +13,19 @@ public class SportsFileNameParser
     // Sports-specific naming patterns
     private static readonly List<SportsPattern> SportsPatterns = new()
     {
+        // BSB (British Superbike): BSB.2026.Round01.Oulton.Park.International.Race.One
+        // Must come before ONE Championship because BSB releases may contain "Race One".
+        new SportsPattern
+        {
+            Sport = "Motorsport",
+            Organization = "BSB",
+            Pattern = new Regex(@"BSB[\.\-\s]+(?<year>\d{4})[\.\-\s]+(?:Round[\.\-\s]*(?<round>\d+)[\.\-\s]*)?(?<name>[A-Za-z]+(?:[\.\-\s]+[A-Za-z0-9]+)*?)(?=[\.\-\s]+(?:\d{3,4}p|WEB|HDTV|BluRay|BDRip|[hx]\.?26[45]|HEVC|AAC|DTS|DD[25P]|TNT|SKY|Multi|English)\b|$)", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+            TitleBuilder = (match) => $"{CleanLocationName(match.Groups["name"].Value)}",
+            RoundExtractor = (match) => match.Groups["round"].Success && int.TryParse(match.Groups["round"].Value, out var r) ? r : (int?)null,
+            LocationExtractor = (match) => CleanLocationName(match.Groups["name"].Value),
+            SessionExtractor = (match) => DetectMotorsportSession(match.Groups["name"].Value)
+        },
+
         // UFC patterns: UFC.299.2024.PPV.1080p, UFC.Fight.Night.230.2024.1080p
         new SportsPattern
         {
@@ -600,6 +613,7 @@ public class SportsFileNameParser
             { @"^(?:Formula[\.\-\s]+3|F3)[\.\-\s]", ("Motorsport", "Formula 3") },
             { @"^IndyCar[\.\-\s]", ("Motorsport", "IndyCar") },
             { @"^WSBK[\.\-\s]", ("Motorsport", "WSBK") },
+            { @"^BSB[\.\-\s]", ("Motorsport", "BSB") },
             { @"^WRC[\.\-\s]", ("Motorsport", "WRC") },
             { @"^DTM[\.\-\s]", ("Motorsport", "DTM") },
         };

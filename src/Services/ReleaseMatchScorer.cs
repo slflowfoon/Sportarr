@@ -460,6 +460,9 @@ public class ReleaseMatchScorer
             return "NASCAR";
         if (normalized.Contains("WEC") || normalized.Contains("WORLD.ENDURANCE"))
             return "WEC";
+        if (normalized.Contains("BRITISH.SUPERBIKE") || normalized.Contains("BRITISH SUPERBIKE") ||
+            Regex.IsMatch(normalized, @"\bBSB\b"))
+            return "BSB";
         if (normalized.Contains("WSBK") || normalized.Contains("SUPERBIKE"))
             return "WSBK";
         if (normalized.Contains("WRC") || normalized.Contains("WORLD.RALLY"))
@@ -522,6 +525,8 @@ public class ReleaseMatchScorer
                 return "Moto2";
             if (upper.Contains("MOTOGP") || upper.Contains("MOTO GP"))
                 return "MotoGP";
+            if (upper.Contains("BRITISH SUPERBIKE") || Regex.IsMatch(upper, @"\bBSB\b"))
+                return "BSB";
             if (upper.Contains("SUPERBIKE") || upper.Contains("WSBK"))
                 return "WSBK";
             if (upper.Contains("WORLD RALLY") || upper.Contains("WRC"))
@@ -1207,7 +1212,7 @@ public class ReleaseMatchScorer
         if (string.IsNullOrEmpty(sportPrefix)) return false;
         return sportPrefix is "Formula1" or "Formula2" or "Formula3" or "FormulaE"
             or "MotoGP" or "Moto2" or "Moto3"
-            or "IndyCar" or "NASCAR" or "WEC" or "WSBK" or "WRC";
+            or "IndyCar" or "NASCAR" or "WEC" or "WSBK" or "BSB" or "WRC";
     }
 
     private bool IsDateBasedSport(string? sportPrefix)
@@ -1221,7 +1226,7 @@ public class ReleaseMatchScorer
         if (string.IsNullOrEmpty(sportPrefix)) return false;
         return sportPrefix is "Formula1" or "Formula2" or "Formula3" or "FormulaE"
             or "MotoGP" or "Moto2" or "Moto3"
-            or "IndyCar" or "NASCAR" or "WEC" or "WSBK" or "WRC";
+            or "IndyCar" or "NASCAR" or "WEC" or "WSBK" or "BSB" or "WRC";
     }
 
     private bool IsTeamSport(string? sportPrefix)
@@ -1395,6 +1400,8 @@ public class ReleaseMatchScorer
         (@"\bindycar\b", "IndyCar"),
         (@"\bnascar\b", "NASCAR"),
         (@"\bwsbk\b", "WSBK"),
+        (@"\bbsb\b", "British Superbike"),
+        (@"\bbritish[\.\-\s]*superbike", "British Superbike"),
         (@"\bsuperbike", "WSBK"),
         (@"\bwrc\b", "WRC"),
         (@"\bworld[\.\-\s]*rally\b", "WRC"),

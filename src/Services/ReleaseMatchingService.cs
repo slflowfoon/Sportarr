@@ -1086,6 +1086,8 @@ public class ReleaseMatchingService
         (@"\bindycar\b", "IndyCar"),
         (@"\bnascar\b", "NASCAR"),
         (@"\bwsbk\b", "WSBK"),
+        (@"\bbsb\b", "British Superbike"),
+        (@"\bbritish[\.\-\s]*superbike", "British Superbike"),
         (@"\bsuperbike", "WSBK"),
         (@"\bwrc\b", "WRC"),
         (@"\bworld[\.\-\s]*rally\b", "WRC"),

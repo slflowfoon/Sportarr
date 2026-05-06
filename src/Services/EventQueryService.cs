@@ -131,6 +131,8 @@ public class EventQueryService
             return "FormulaE";
         if (lower.Contains("motogp"))
             return "MotoGP";
+        if (lower.Contains("british superbike") || lower.Contains("bennetts british superbike") || lower == "bsb")
+            return "BSB";
         if (lower.Contains("nascar"))
             return "NASCAR";
         if (lower.Contains("indycar"))
@@ -624,7 +626,7 @@ public class EventQueryService
     /// </summary>
     private bool IsMotorsport(string sport, string? leagueName, string? eventTitle = null)
     {
-        var motorsportKeywords = new[] { "motorsport", "racing", "formula", "nascar", "indycar", "motogp", "f1", "grand prix", "gp" };
+        var motorsportKeywords = new[] { "motorsport", "racing", "formula", "nascar", "indycar", "motogp", "superbike", "bsb", "f1", "grand prix", "gp" };
         var sportLower = sport.ToLowerInvariant();
         var leagueLower = leagueName?.ToLowerInvariant() ?? "";
         var titleLower = eventTitle?.ToLowerInvariant() ?? "";
@@ -683,6 +685,8 @@ public class EventQueryService
 
         if (lower.Contains("motogp"))
             return "MotoGP";
+        if (lower.Contains("british superbike") || lower.Contains("bennetts british superbike") || lower == "bsb")
+            return "BSB";
         if (lower.Contains("nascar"))
             return "NASCAR";
         if (lower.Contains("indycar"))
