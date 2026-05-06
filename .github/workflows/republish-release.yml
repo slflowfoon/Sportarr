@@ -226,8 +226,8 @@ jobs:
 
           **Docker Installation**
           \`\`\`
-          docker pull sportarr/sportarr:latest
-          docker pull sportarr/sportarr:${VERSION_NUMBER}
+          docker pull ghcr.io/slflowfoon/sportarr:latest
+          docker pull ghcr.io/slflowfoon/sportarr:${VERSION_NUMBER}
           \`\`\`
 
           **Downloads**

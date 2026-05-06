@@ -95,7 +95,7 @@ jobs:
 
             ### Docker
             ```
-            docker pull sportarr/sportarr:dev
+            docker pull ghcr.io/slflowfoon/sportarr:dev
             ```
 
             ### Downloads
@@ -133,12 +133,6 @@ jobs:
             image=moby/buildkit:latest
             network=host
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -153,8 +147,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            sportarr/sportarr:dev
-            sportarr/sportarr:${{ steps.version.outputs.version }}
             ghcr.io/slflowfoon/sportarr:dev
             ghcr.io/slflowfoon/sportarr:${{ steps.version.outputs.version }}
           build-args: |
@@ -175,7 +167,7 @@ jobs:
           COMMIT_MSG=$(git log --pretty=format:"%s" -1 | sed 's/"/\\"/g')
           COMMIT_SHA=$(git rev-parse --short HEAD)
 
-          DESCRIPTION="**Development Build**\n• ${COMMIT_MSG}\n\n**Docker Installation**\n\`\`\`\ndocker pull sportarr/sportarr:dev\n\`\`\`\n\n**Downloads**\n[View all platform downloads](https://github.com/${{ github.repository }}/releases/tag/dev)"
+          DESCRIPTION="**Development Build**\n• ${COMMIT_MSG}\n\n**Docker Installation**\n\`\`\`\ndocker pull ghcr.io/slflowfoon/sportarr:dev\n\`\`\`\n\n**Downloads**\n[View all platform downloads](https://github.com/${{ github.repository }}/releases/tag/dev)"
 
           curl -X POST "$WEBHOOK_URL" \
             -H "Content-Type: application/json" \
