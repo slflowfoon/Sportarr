@@ -428,13 +428,31 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Compute Docker tags
         id: docker_tags
         run: |
           VERSION="${{ steps.bump_version.outputs.version_number }}"
           MAJOR=$(echo $VERSION | cut -d. -f1)
           MINOR=$(echo $VERSION | cut -d. -f2)
-          echo "tags=sportarr/sportarr:latest,sportarr/sportarr:${VERSION},sportarr/sportarr:${MAJOR}.${MINOR},sportarr/sportarr:${MAJOR}" >> $GITHUB_OUTPUT
+          {
+            echo "tags<<EOF"
+            echo "sportarr/sportarr:latest"
+            echo "sportarr/sportarr:${VERSION}"
+            echo "sportarr/sportarr:${MAJOR}.${MINOR}"
+            echo "sportarr/sportarr:${MAJOR}"
+            echo "ghcr.io/slflowfoon/sportarr:latest"
+            echo "ghcr.io/slflowfoon/sportarr:${VERSION}"
+            echo "ghcr.io/slflowfoon/sportarr:${MAJOR}.${MINOR}"
+            echo "ghcr.io/slflowfoon/sportarr:${MAJOR}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6

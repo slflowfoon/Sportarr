@@ -154,6 +154,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -163,6 +170,8 @@ jobs:
           tags: |
             sportarr/sportarr:pr
             sportarr/sportarr:${{ steps.version.outputs.version }}
+            ghcr.io/slflowfoon/sportarr:pr
+            ghcr.io/slflowfoon/sportarr:${{ steps.version.outputs.version }}
           build-args: |
             SPORTARR_BRANCH=pr
           cache-from: type=gha
