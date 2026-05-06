@@ -496,6 +496,11 @@ jobs:
           COMPARE_URL: ${{ steps.changelog.outputs.compare_url }}
           PREVIOUS_TAG: ${{ steps.changelog.outputs.previous_tag }}
         run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "DISCORD_RELEASE_WEBHOOK is not configured; skipping Discord notification."
+            exit 0
+          fi
+
           VERSION_NUMBER="${{ steps.bump_version.outputs.version_number }}"
           # Format release notes for Discord embed (use jq for safe JSON construction).
           # The Full Changelog line at the bottom of release_notes.md is dropped here

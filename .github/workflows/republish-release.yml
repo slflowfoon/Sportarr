@@ -177,6 +177,11 @@ jobs:
           RELEASE_URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.compose.outputs.tag }}
         run: |
           set -euo pipefail
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "DISCORD_RELEASE_WEBHOOK is not configured; skipping Discord notification."
+            exit 0
+          fi
+
           VERSION_NUMBER="${VERSION#v}"
 
           # Same shape as release.yml's Discord step: render Markdown ###

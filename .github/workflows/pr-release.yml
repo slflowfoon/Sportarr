@@ -178,6 +178,11 @@ jobs:
           WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "DISCORD_RELEASE_WEBHOOK is not configured; skipping Discord notification."
+            exit 0
+          fi
+
           # Get the commit that triggered this build
           COMMIT_MSG=$(git log --pretty=format:"%s" -1 | sed 's/"/\\"/g')
           COMMIT_SHA=$(git rev-parse --short HEAD)
