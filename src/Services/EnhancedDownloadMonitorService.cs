@@ -20,13 +20,17 @@ public class EnhancedDownloadMonitorService : BackgroundService
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(30);
     private readonly TimeSpan _stalledTimeout = TimeSpan.FromMinutes(10); // Default stalled timeout
 
-    // Hard cap on import retries. After this many failed import attempts the
-    // row is marked Failed permanently and the monitor stops touching it —
+    // Hard cap on non-path import retries. After this many failed import
+    // attempts the row is marked Failed permanently and the monitor stops touching it —
     // otherwise the download client (e.g. SABnzbd) will keep reporting the
     // item as 100% complete on every poll, the monitor will keep flipping
     // Failed→Completed, and HandleCompletedDownload will keep retrying the
     // same broken import forever. Without this cap we've seen ImportRetryCount
     // climb past 1000 in production.
+    //
+    // Path accessibility failures are different: mover/extractor workflows can
+    // legitimately make the client-reported path appear several minutes later.
+    // Those rows remain ImportPending and are allowed to retry indefinitely.
     private const int MaxImportRetries = 3;
 
     public EnhancedDownloadMonitorService(
@@ -116,10 +120,9 @@ public class EnhancedDownloadMonitorService : BackgroundService
         //   - RetryCount         : incremented when the *download* itself fails
         //                          (HandleFailedDownload). Re-grab is allowed up to 3 attempts.
         //   - ImportRetryCount   : incremented when the *import* of a completed
-        //                          download fails. After MaxImportRetries the row is
-        //                          permanently Failed and we must NOT pick it up again,
-        //                          even though SAB will still happily report it as
-        //                          100% complete on every poll.
+        //                          download fails. Non-path failures are capped at
+        //                          MaxImportRetries. Path accessibility failures are
+        //                          kept as ImportPending and retried indefinitely.
         //
         // Without the ImportRetryCount gate, the previous query kept pulling Failed
         // rows whose RetryCount was 0 (download succeeded, only import broke), the
@@ -478,12 +481,10 @@ public class EnhancedDownloadMonitorService : BackgroundService
     {
         download.CompletedAt = DateTime.UtcNow;
 
-        // Defensive guard: even though MonitorDownloadsAsync filters out rows
-        // with ImportRetryCount >= MaxImportRetries, the status flip from
-        // Failed→Completed earlier in this method's call stack can let a row
-        // reach here that has already exhausted its retries. Don't burn another
-        // attempt on it — pin it to Failed and walk away.
-        if ((download.ImportRetryCount ?? 0) >= MaxImportRetries)
+        // Defensive guard for real failed imports. Do not apply this to
+        // ImportPending rows: those represent path accessibility waits and must
+        // keep retrying while an external mover/extractor finishes.
+        if (download.Status == DownloadStatus.Failed && (download.ImportRetryCount ?? 0) >= MaxImportRetries)
         {
             download.Status = DownloadStatus.Failed;
             if (string.IsNullOrEmpty(download.ErrorMessage))
