@@ -704,6 +704,7 @@ public class EnhancedDownloadMonitorService : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SportarrDbContext>();
         var downloadClientService = scope.ServiceProvider.GetRequiredService<DownloadClientService>();
+        var importMatchingService = scope.ServiceProvider.GetRequiredService<ImportMatchingService>();
 
         // Get all enabled download clients
         var clients = await db.DownloadClients
@@ -837,24 +838,15 @@ public class EnhancedDownloadMonitorService : BackgroundService
 
                     // Try to match to an event by title
                     int? suggestedEventId = null;
+                    string? suggestedPart = null;
                     int confidence = 0;
 
-                    // Simple title matching: search for events whose title contains key words from download title
-                    var cleanTitle = CleanDownloadTitle(download.Title);
-                    if (!string.IsNullOrEmpty(cleanTitle))
+                    var suggestion = await importMatchingService.FindBestMatchAsync(download.Title, download.FilePath);
+                    if (suggestion?.EventId != null && suggestion.Confidence >= 50)
                     {
-                        var pattern = $"%{cleanTitle}%";
-                        var matchedEvent = await db.Events
-                            .Where(e => !e.HasFile)
-                            .Where(e => EF.Functions.Like(e.Title, pattern) ||
-                                       e.Title != null && cleanTitle.Contains(e.Title))
-                            .FirstOrDefaultAsync(cancellationToken);
-
-                        if (matchedEvent != null)
-                        {
-                            suggestedEventId = matchedEvent.Id;
-                            confidence = 50; // Basic title match
-                        }
+                        suggestedEventId = suggestion.EventId;
+                        suggestedPart = suggestion.Part;
+                        confidence = suggestion.Confidence;
                     }
 
                     // Create pending import
@@ -868,6 +860,7 @@ public class EnhancedDownloadMonitorService : BackgroundService
                         Protocol = download.Protocol,
                         TorrentInfoHash = download.TorrentInfoHash,
                         SuggestedEventId = suggestedEventId,
+                        SuggestedPart = suggestedPart,
                         SuggestionConfidence = confidence,
                         Detected = DateTime.UtcNow,
                         Status = PendingImportStatus.Pending

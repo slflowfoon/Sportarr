@@ -157,7 +157,9 @@ public class ImportMatchingService
         if (!string.IsNullOrEmpty(organization))
         {
             var leagueMatches = await query
-                .Where(e => e.League != null && EF.Functions.Like(e.League.Name, $"%{organization}%"))
+                .Where(e => e.League != null &&
+                            (EF.Functions.Like(e.League.Name, $"%{organization}%") ||
+                             (organization == "BSB" && EF.Functions.Like(e.League.Name, "%British Superbike%"))))
                 .OrderByDescending(e => e.EventDate)
                 .Take(10)
                 .ToListAsync();
@@ -202,7 +204,9 @@ public class ImportMatchingService
             var altRoundStr = roundStr == "0" ? "500" : (roundStr == "500" ? "0" : null);
             var roundMatches = await query
                 .Where(e => (e.Round == roundStr || (altRoundStr != null && e.Round == altRoundStr)) &&
-                            e.League != null && EF.Functions.Like(e.League.Name, $"%{organization}%"))
+                            e.League != null &&
+                            (EF.Functions.Like(e.League.Name, $"%{organization}%") ||
+                             (organization == "BSB" && EF.Functions.Like(e.League.Name, "%British Superbike%"))))
                 .OrderByDescending(e => e.EventDate)
                 .Take(20) // More results since one round has multiple sessions
                 .ToListAsync();
@@ -294,10 +298,39 @@ public class ImportMatchingService
             }
         }
 
+        if (sportsResult?.Sport?.Equals("Motorsport", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var eventRaceNumber = ExtractMotorsportRaceNumber(eventTitle);
+            var releaseRaceNumber = ExtractMotorsportRaceNumber(searchTitle);
+            if (eventRaceNumber.HasValue)
+            {
+                if (releaseRaceNumber.HasValue && releaseRaceNumber.Value != eventRaceNumber.Value)
+                {
+                    _logger.LogDebug("[Import Matching] Race number mismatch: release race {ReleaseRace} vs event race {EventRace} for '{EventTitle}'",
+                        releaseRaceNumber.Value, eventRaceNumber.Value, evt.Title);
+                    return 0;
+                }
+
+                if (!releaseRaceNumber.HasValue && ExtractDayNumber(searchTitle).HasValue)
+                {
+                    _logger.LogDebug("[Import Matching] Rejecting day coverage for specific race event '{EventTitle}'",
+                        evt.Title);
+                    return 0;
+                }
+
+                if (releaseRaceNumber == eventRaceNumber)
+                {
+                    confidence += 20;
+                }
+            }
+        }
+
         // Sports parser bonus: If organization matches league = +15 points
         if (sportsResult != null && !string.IsNullOrEmpty(sportsResult.Organization) && evt.League != null)
         {
             if (evt.League.Name.Contains(sportsResult.Organization, StringComparison.OrdinalIgnoreCase) ||
+                (sportsResult.Organization.Equals("BSB", StringComparison.OrdinalIgnoreCase) &&
+                 evt.League.Name.Contains("British Superbike", StringComparison.OrdinalIgnoreCase)) ||
                 sportsResult.Organization.Contains(evt.League.Name, StringComparison.OrdinalIgnoreCase))
             {
                 confidence += 15;
@@ -350,11 +383,21 @@ public class ImportMatchingService
             }
             else
             {
-                // File has a session but event title has no detectable session — likely wrong match
-                // e.g., "Practice 1" file matching a generic "Grand Prix" event
-                confidence -= 30;
-                _logger.LogDebug("[Import Matching] File has session '{Session}' but event '{EventTitle}' has no session — penalizing",
-                    sportsResult.Session, evt.Title);
+                var eventLooksLikeRace = Regex.IsMatch(evt.Title, @"\brace\s*(?:\d+|one|two|three)?\b", RegexOptions.IgnoreCase);
+                if (eventLooksLikeRace && sportsResult.Session.Equals("Race", StringComparison.OrdinalIgnoreCase))
+                {
+                    confidence += 10;
+                    _logger.LogDebug("[Import Matching] Race session inferred from event title '{EventTitle}'",
+                        evt.Title);
+                }
+                else
+                {
+                    // File has a session but event title has no detectable session — likely wrong match
+                    // e.g., "Practice 1" file matching a generic "Grand Prix" event
+                    confidence -= 30;
+                    _logger.LogDebug("[Import Matching] File has session '{Session}' but event '{EventTitle}' has no session — penalizing",
+                        sportsResult.Session, evt.Title);
+                }
             }
         }
 
@@ -371,6 +414,33 @@ public class ImportMatchingService
         }
 
         return Math.Min(100, confidence);
+    }
+
+    private static int? ExtractMotorsportRaceNumber(string title)
+    {
+        var match = Regex.Match(title, @"\brace\s*(?<number>\d+|one|two|three|four)\b", RegexOptions.IgnoreCase);
+        if (!match.Success) return null;
+        return ParseSmallNumber(match.Groups["number"].Value);
+    }
+
+    private static int? ExtractDayNumber(string title)
+    {
+        var match = Regex.Match(title, @"\bday\s*(?<number>\d+|one|two|three|four)\b", RegexOptions.IgnoreCase);
+        if (!match.Success) return null;
+        return ParseSmallNumber(match.Groups["number"].Value);
+    }
+
+    private static int? ParseSmallNumber(string value)
+    {
+        if (int.TryParse(value, out var number)) return number;
+        return value.ToLowerInvariant() switch
+        {
+            "one" => 1,
+            "two" => 2,
+            "three" => 3,
+            "four" => 4,
+            _ => null
+        };
     }
 
     /// <summary>

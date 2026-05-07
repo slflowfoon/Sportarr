@@ -596,18 +596,20 @@ public class QBittorrentClient
         var categoryTorrents = torrents.Where(t =>
             t.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
 
-        return categoryTorrents.Select(t =>
+        var downloads = new List<ExternalDownloadInfo>();
+        foreach (var t in categoryTorrents)
         {
             var state = t.State.ToLowerInvariant();
             var isCompleted = state == "uploading" || state == "stalledup" ||
                               state == "pausedup" || t.Progress >= 0.999;
+            var outputPath = await GetTorrentOutputPathAsync(config, t);
 
-            return new ExternalDownloadInfo
+            downloads.Add(new ExternalDownloadInfo
             {
                 DownloadId = t.Hash,
                 Title = t.Name,
                 Category = t.Category,
-                FilePath = t.SavePath,
+                FilePath = outputPath,
                 Size = t.Size,
                 IsCompleted = isCompleted,
                 Protocol = "Torrent",
@@ -615,8 +617,10 @@ public class QBittorrentClient
                 CompletedDate = t.CompletedOn > 0
                     ? DateTimeOffset.FromUnixTimeSeconds(t.CompletedOn).UtcDateTime
                     : (DateTime?)null
-            };
-        }).ToList();
+            });
+        }
+
+        return downloads;
     }
 
     /// <summary>

@@ -52,4 +52,52 @@ public class ReleaseMatchScorerTests
 
         score.Should().BeGreaterThanOrEqualTo(ReleaseMatchScorer.MinimumMatchScore);
     }
+
+    [Fact]
+    public void CalculateMatchScore_ShouldRejectWrongBritishSuperbikeRaceNumber()
+    {
+        var scorer = new ReleaseMatchScorer();
+        var evt = new Event
+        {
+            Title = "Oulton Park Race 1",
+            Sport = "Motorsport",
+            EventDate = new DateTime(2026, 5, 4, 12, 0, 0, DateTimeKind.Utc),
+            Round = "1",
+            League = new League
+            {
+                Name = "British Superbike Championship",
+                Sport = "Motorsport"
+            }
+        };
+
+        var score = scorer.CalculateMatchScore(
+            "BSB 2026 Round01 Oulton Park International Race Two TNT WEB-DL 1080p H264 DDP5 1 English-MWR",
+            evt);
+
+        score.Should().Be(0);
+    }
+
+    [Fact]
+    public void CalculateMatchScore_ShouldRejectBritishSuperbikeDayCoverageForSpecificRace()
+    {
+        var scorer = new ReleaseMatchScorer();
+        var evt = new Event
+        {
+            Title = "Oulton Park Race 1",
+            Sport = "Motorsport",
+            EventDate = new DateTime(2026, 5, 4, 12, 0, 0, DateTimeKind.Utc),
+            Round = "1",
+            League = new League
+            {
+                Name = "British Superbike Championship",
+                Sport = "Motorsport"
+            }
+        };
+
+        var score = scorer.CalculateMatchScore(
+            "BSB 2026 Round01 Oulton Park International Day One TNT WEB-DL 1080p H264 DDP5 1 English-MWR",
+            evt);
+
+        score.Should().Be(0);
+    }
 }

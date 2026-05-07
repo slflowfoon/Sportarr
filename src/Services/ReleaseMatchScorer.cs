@@ -264,6 +264,23 @@ public class ReleaseMatchScorer
         if (ContainsDifferentSport(releaseTitle, evt))
             return 0;
 
+        // Motorsport race numbers are separate sessions. "Race Two" should not
+        // match "Race 1", and generic "Day One" coverage should not satisfy a
+        // specific race event.
+        if (IsMotorsport(eventSportPrefix))
+        {
+            var eventRaceNumber = ExtractMotorsportRaceNumber(evt.Title);
+            var releaseRaceNumber = ExtractMotorsportRaceNumber(releaseTitle);
+            if (eventRaceNumber.HasValue)
+            {
+                if (releaseRaceNumber.HasValue && releaseRaceNumber.Value != eventRaceNumber.Value)
+                    return 0;
+
+                if (!releaseRaceNumber.HasValue && ExtractDayNumber(releaseTitle).HasValue)
+                    return 0;
+            }
+        }
+
         // === SCORING CRITERIA ===
 
         // Base score for matching year (if year info exists)
@@ -1201,6 +1218,33 @@ public class ReleaseMatchScorer
         if (match.Success && int.TryParse(match.Groups[1].Value, out var roundNum))
             return roundNum;
         return null;
+    }
+
+    private int? ExtractMotorsportRaceNumber(string title)
+    {
+        var match = Regex.Match(title, @"\brace\s*(?<number>\d+|one|two|three|four)\b", RegexOptions.IgnoreCase);
+        if (!match.Success) return null;
+        return ParseSmallNumber(match.Groups["number"].Value);
+    }
+
+    private int? ExtractDayNumber(string title)
+    {
+        var match = Regex.Match(title, @"\bday\s*(?<number>\d+|one|two|three|four)\b", RegexOptions.IgnoreCase);
+        if (!match.Success) return null;
+        return ParseSmallNumber(match.Groups["number"].Value);
+    }
+
+    private int? ParseSmallNumber(string value)
+    {
+        if (int.TryParse(value, out var number)) return number;
+        return value.ToLowerInvariant() switch
+        {
+            "one" => 1,
+            "two" => 2,
+            "three" => 3,
+            "four" => 4,
+            _ => null
+        };
     }
 
     #endregion
