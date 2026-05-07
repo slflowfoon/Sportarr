@@ -505,14 +505,23 @@ public class ImportMatchingService
     /// </summary>
     public async Task<List<ImportSuggestion>> GetAllPossibleMatchesAsync(string title)
     {
+        var sportsResult = _sportsParser.Parse(title);
         var parsed = _parser.Parse(title);
-        var events = await FindEventMatchesAsync(parsed.EventTitle, null);
+        var searchTitle = sportsResult.Confidence >= 60 && !string.IsNullOrEmpty(sportsResult.EventTitle)
+            ? sportsResult.EventTitle
+            : parsed.EventTitle ?? title;
+        var events = await FindEventMatchesAsync(
+            searchTitle,
+            null,
+            sportsResult.Organization,
+            sportsResult.EventDate,
+            sportsResult.RoundNumber);
 
         var suggestions = new List<ImportSuggestion>();
 
         foreach (var evt in events)
         {
-            var confidence = CalculateMatchConfidence(parsed.EventTitle, evt.Title, null, evt);
+            var confidence = CalculateMatchConfidence(searchTitle, evt.Title, null, evt, sportsResult);
 
             suggestions.Add(new ImportSuggestion
             {
