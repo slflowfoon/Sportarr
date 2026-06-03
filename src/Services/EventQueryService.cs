@@ -279,13 +279,120 @@ public class EventQueryService
         if (!string.IsNullOrEmpty(evt.Round) && int.TryParse(evt.Round, out var roundNum) && roundNum > 0 && roundNum < 100)
         {
             queries.Add($"{seriesPrefix} {year} Round{roundNum:D2}");
+            AddMotorsportLocationQueries(seriesPrefix, year, evt.Title, queries);
             // Fallback: series + year only (broad — catches all naming variants)
             queries.Add($"{seriesPrefix} {year}");
         }
         else
         {
             // No valid round — just series + year
+            AddMotorsportLocationQueries(seriesPrefix, year, evt.Title, queries);
             queries.Add($"{seriesPrefix} {year}");
+        }
+    }
+
+    private void AddMotorsportLocationQueries(string seriesPrefix, int year, string? eventTitle, List<string> queries)
+    {
+        if (!string.Equals(seriesPrefix, "MotoGP", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (string.IsNullOrWhiteSpace(eventTitle))
+            return;
+
+        var normalizedEventTitle = SearchNormalizationService.NormalizeForSearch(eventTitle);
+        var hasDemonymInTitle = ContainsMotorsportDemonym(normalizedEventTitle);
+
+        var locationTerms = SearchNormalizationService.ExtractKeyTerms(eventTitle)
+            .SelectMany(term => SearchNormalizationService.GenerateSearchVariations(term))
+            .SelectMany(ExtractLocationTokens)
+            .Where(token => token.Length > 2 && !IsMotorsportQueryNoise(token))
+            .Select((token, index) => new { Token = token, Index = index })
+            .GroupBy(item => item.Token, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(item => GetMotorsportLocationQueryPriority(item.Token, normalizedEventTitle, hasDemonymInTitle))
+            .ThenBy(item => item.Index)
+            .Select(item => item.Token)
+            .ToList();
+
+        foreach (var token in locationTerms)
+        {
+            AddUniqueQuery(queries, $"{seriesPrefix} {year} {token}");
+        }
+    }
+
+    private static IEnumerable<string> ExtractLocationTokens(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            yield break;
+
+        var cleaned = Regex.Replace(value.Trim(), @"\s+", " ");
+        if (!string.IsNullOrWhiteSpace(cleaned))
+            yield return cleaned;
+
+        foreach (var part in cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (!string.IsNullOrWhiteSpace(part))
+                yield return part;
+        }
+    }
+
+    private static bool IsMotorsportQueryNoise(string token)
+    {
+        var noise = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "grand", "prix", "race", "round", "sprint", "qualifying", "practice",
+            "free", "fp1", "fp2", "fp3", "session", "event", "championship",
+            "series", "season", "test", "testing", "day"
+        };
+
+        return noise.Contains(token);
+    }
+
+    private static int GetMotorsportLocationQueryPriority(string token, string normalizedEventTitle, bool hasDemonymInTitle)
+    {
+        if (hasDemonymInTitle && IsCountryLocationToken(token))
+            return 0;
+
+        if (ContainsQueryToken(normalizedEventTitle, token))
+            return 1;
+
+        return 2;
+    }
+
+    private static bool ContainsMotorsportDemonym(string title)
+    {
+        var demonyms = new[]
+        {
+            "Italian", "French", "German", "Dutch", "Australian", "Malaysian",
+            "Qatari", "Argentine", "Argentinian", "American", "Spanish",
+            "Japanese", "Portuguese", "Thai", "Indonesian", "Indian"
+        };
+
+        return demonyms.Any(demonym => ContainsQueryToken(title, demonym));
+    }
+
+    private static bool IsCountryLocationToken(string token)
+    {
+        var countries = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Italy", "France", "Germany", "Netherlands", "Australia", "Malaysia",
+            "Qatar", "Argentina", "United States", "USA", "Spain", "Japan",
+            "Portugal", "Thailand", "Indonesia", "India"
+        };
+
+        return countries.Contains(token);
+    }
+
+    private static bool ContainsQueryToken(string text, string token)
+    {
+        return Regex.IsMatch(text, $@"\b{Regex.Escape(token)}\b", RegexOptions.IgnoreCase);
+    }
+
+    private static void AddUniqueQuery(List<string> queries, string query)
+    {
+        if (!queries.Contains(query, StringComparer.OrdinalIgnoreCase))
+        {
+            queries.Add(query);
         }
     }
 

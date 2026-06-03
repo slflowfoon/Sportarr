@@ -136,7 +136,7 @@ export default function ManualSearchModal({
   const [hasExistingFile, setHasExistingFile] = useState(false);
   const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [hideRejected, setHideRejected] = useState(true); // Default: hide rejected results
+  const [hideRejected, setHideRejected] = useState(false); // Default: show rejected results in interactive search
   const filterDropdownRef = useRef<HTMLDivElement>(null);
 
   // Custom search state
