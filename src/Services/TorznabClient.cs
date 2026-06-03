@@ -117,7 +117,7 @@ public class TorznabClient
     /// <summary>
     /// Search for releases matching query
     /// </summary>
-    public async Task<List<ReleaseSearchResult>> SearchAsync(Indexer config, string query, int maxResults = 10000)
+    public async Task<List<ReleaseSearchResult>> SearchAsync(Indexer config, string query, int maxResults = 10000, bool useCategoryFilter = true)
     {
         // Build parameters with category filtering
         var parameters = new Dictionary<string, string>
@@ -128,8 +128,8 @@ public class TorznabClient
         };
 
         // Add category filter - use configured categories or default sport categories
-        var categories = GetEffectiveCategories(config);
-        if (categories.Any())
+        var categories = useCategoryFilter ? GetEffectiveCategories(config) : new List<string>();
+        if (useCategoryFilter && categories.Any())
         {
             parameters["cat"] = string.Join(",", categories);
         }
@@ -138,7 +138,7 @@ public class TorznabClient
 
         _logger.LogInformation("[Torznab] Searching {Indexer} for: {Query}", config.Name, query);
         _logger.LogDebug("[Torznab] Search URL: {Url}", string.IsNullOrEmpty(config.ApiKey) ? url : url.Replace(config.ApiKey, "***"));
-        _logger.LogDebug("[Torznab] Categories: {Categories}", categories.Any() ? string.Join(",", categories) : "(none)");
+        _logger.LogDebug("[Torznab] Categories: {Categories}", useCategoryFilter ? (categories.Any() ? string.Join(",", categories) : "(none)") : "(disabled)");
 
         // Create request with rate limit headers for RateLimitHandler
         var request = new HttpRequestMessage(HttpMethod.Get, url);

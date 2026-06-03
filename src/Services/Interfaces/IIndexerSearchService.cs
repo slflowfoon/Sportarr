@@ -28,12 +28,13 @@ public interface IIndexerSearchService
         bool enableMultiPartEpisodes = true,
         string? eventTitle = null,
         List<int>? leagueTags = null,
-        List<SkippedIndexer>? skippedIndexers = null);
+        List<SkippedIndexer>? skippedIndexers = null,
+        bool useCategoryFilter = true);
 
     /// <summary>
     /// Search a single indexer
     /// </summary>
-    Task<List<ReleaseSearchResult>> SearchIndexerAsync(Indexer indexer, string query, int maxResults = 10000);
+    Task<List<ReleaseSearchResult>> SearchIndexerAsync(Indexer indexer, string query, int maxResults = 10000, bool useCategoryFilter = true);
 
     /// <summary>
     /// Select the best release from search results

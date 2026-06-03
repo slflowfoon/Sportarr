@@ -94,7 +94,7 @@ public class IndexerSearchService : IIndexerSearchService
     /// <param name="sport">Sport type for part validation (e.g., "Fighting")</param>
     /// <param name="enableMultiPartEpisodes">Whether multi-part episodes are enabled. When false, rejects releases with detected parts.</param>
     /// <param name="eventTitle">Optional event title for event-type-specific part handling (e.g., Fight Night vs PPV)</param>
-    public async Task<List<ReleaseSearchResult>> SearchAllIndexersAsync(string query, int maxResultsPerIndexer = 10000, int? qualityProfileId = null, string? requestedPart = null, string? sport = null, bool enableMultiPartEpisodes = true, string? eventTitle = null, List<int>? leagueTags = null, List<SkippedIndexer>? skippedIndexers = null)
+    public async Task<List<ReleaseSearchResult>> SearchAllIndexersAsync(string query, int maxResultsPerIndexer = 10000, int? qualityProfileId = null, string? requestedPart = null, string? sport = null, bool enableMultiPartEpisodes = true, string? eventTitle = null, List<int>? leagueTags = null, List<SkippedIndexer>? skippedIndexers = null, bool useCategoryFilter = true)
     {
         _logger.LogInformation("[Indexer Search] Searching all indexers for: {Query}", query);
 
@@ -272,7 +272,7 @@ public class IndexerSearchService : IIndexerSearchService
                         }
                     }
 
-                    var results = await SearchIndexerAsync(indexer, query, maxResultsPerIndexer);
+                    var results = await SearchIndexerAsync(indexer, query, maxResultsPerIndexer, useCategoryFilter);
 
                     // Update status with results (ensure non-negative in case of race conditions)
                     lock (_statusLock)
@@ -432,7 +432,7 @@ public class IndexerSearchService : IIndexerSearchService
     /// Search a single indexer with health tracking.
     /// Rate limiting is handled at the HTTP layer via RateLimitHandler.
     /// </summary>
-    public async Task<List<ReleaseSearchResult>> SearchIndexerAsync(Indexer indexer, string query, int maxResults = 10000)
+    public async Task<List<ReleaseSearchResult>> SearchIndexerAsync(Indexer indexer, string query, int maxResults = 10000, bool useCategoryFilter = true)
     {
         try
         {
@@ -451,8 +451,8 @@ public class IndexerSearchService : IIndexerSearchService
             {
                 results = indexer.Type switch
                 {
-                    IndexerType.Torznab => await SearchTorznabAsync(indexer, query, maxResults),
-                    IndexerType.Newznab => await SearchNewznabAsync(indexer, query, maxResults),
+                    IndexerType.Torznab => await SearchTorznabAsync(indexer, query, maxResults, useCategoryFilter),
+                    IndexerType.Newznab => await SearchNewznabAsync(indexer, query, maxResults, useCategoryFilter),
                     _ => new List<ReleaseSearchResult>()
                 };
 
@@ -746,22 +746,22 @@ public class IndexerSearchService : IIndexerSearchService
 
     // Private helper methods
 
-    private async Task<List<ReleaseSearchResult>> SearchTorznabAsync(Indexer indexer, string query, int maxResults)
+    private async Task<List<ReleaseSearchResult>> SearchTorznabAsync(Indexer indexer, string query, int maxResults, bool useCategoryFilter = true)
     {
         var httpClient = _httpClientFactory.CreateClient("IndexerClient");
         var torznabLogger = _loggerFactory.CreateLogger<TorznabClient>();
         var client = new TorznabClient(httpClient, torznabLogger, _qualityDetection);
 
-        return await client.SearchAsync(indexer, query, maxResults);
+        return await client.SearchAsync(indexer, query, maxResults, useCategoryFilter);
     }
 
-    private async Task<List<ReleaseSearchResult>> SearchNewznabAsync(Indexer indexer, string query, int maxResults)
+    private async Task<List<ReleaseSearchResult>> SearchNewznabAsync(Indexer indexer, string query, int maxResults, bool useCategoryFilter = true)
     {
         var httpClient = _httpClientFactory.CreateClient("IndexerClient");
         var newznabLogger = _loggerFactory.CreateLogger<NewznabClient>();
         var client = new NewznabClient(httpClient, newznabLogger, _qualityDetection);
 
-        return await client.SearchAsync(indexer, query, maxResults);
+        return await client.SearchAsync(indexer, query, maxResults, useCategoryFilter);
     }
 
     private async Task<bool> TestTorznabAsync(Indexer indexer)

@@ -197,7 +197,17 @@ app.MapPost("/api/event/{eventId:int}/search", async (
             // Pass enableMultiPartEpisodes to ensure proper part filtering
             // When disabled for fighting sports, this rejects releases with detected parts (Main Card, Prelims, etc.)
             // Pass event title for Fight Night detection (base name = Main Card for Fight Nights)
-            var results = await indexerSearchService.SearchAllIndexersAsync(query, 10000, qualityProfileId, part, evt.Sport, config.EnableMultiPartEpisodes, evt.Title, evt.League?.Tags, skippedIndexers);
+            var results = await indexerSearchService.SearchAllIndexersAsync(
+                query,
+                10000,
+                qualityProfileId,
+                part,
+                evt.Sport,
+                config.EnableMultiPartEpisodes,
+                evt.Title,
+                evt.League?.Tags,
+                skippedIndexers,
+                useCategoryFilter: false);
 
             // Add results with GUID deduplication (fallback queries may overlap with primary)
             foreach (var result in results)

@@ -59,7 +59,7 @@ public class NewznabClient
     /// <summary>
     /// Search for NZB releases matching query
     /// </summary>
-    public async Task<List<ReleaseSearchResult>> SearchAsync(Indexer config, string query, int maxResults = 10000)
+    public async Task<List<ReleaseSearchResult>> SearchAsync(Indexer config, string query, int maxResults = 10000, bool useCategoryFilter = true)
     {
         // Build parameters with category filtering
         var parameters = new Dictionary<string, string>
@@ -70,8 +70,8 @@ public class NewznabClient
         };
 
         // Add category filter - use configured categories or default sport categories
-        var categories = GetEffectiveCategories(config);
-        if (categories.Any())
+        var categories = useCategoryFilter ? GetEffectiveCategories(config) : new List<string>();
+        if (useCategoryFilter && categories.Any())
         {
             parameters["cat"] = string.Join(",", categories);
         }
@@ -80,7 +80,7 @@ public class NewznabClient
 
         _logger.LogInformation("[Newznab] Searching {Indexer} for: {Query}", config.Name, query);
         _logger.LogDebug("[Newznab] Search URL: {Url}", string.IsNullOrEmpty(config.ApiKey) ? url : url.Replace(config.ApiKey, "***"));
-        _logger.LogDebug("[Newznab] Categories: {Categories}", categories.Any() ? string.Join(",", categories) : "(none)");
+        _logger.LogDebug("[Newznab] Categories: {Categories}", useCategoryFilter ? (categories.Any() ? string.Join(",", categories) : "(none)") : "(disabled)");
 
         // Create request with rate limit headers for RateLimitHandler
         var request = new HttpRequestMessage(HttpMethod.Get, url);
