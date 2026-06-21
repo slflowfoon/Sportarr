@@ -100,4 +100,32 @@ public class ReleaseMatchScorerTests
 
         score.Should().Be(0);
     }
+
+    [Fact]
+    public void CalculateMatchScore_ShouldDistinguishHungarySprintFromCzechiaSprint()
+    {
+        var scorer = new ReleaseMatchScorer();
+        var evt = new Event
+        {
+            Title = "Hungary Sprint Race",
+            Sport = "Motorsport",
+            EventDate = new DateTime(2026, 6, 6, 12, 0, 0, DateTimeKind.Utc),
+            Round = "8",
+            League = new League
+            {
+                Name = "MotoGP",
+                Sport = "Motorsport"
+            }
+        };
+
+        var hungaryScore = scorer.CalculateMatchScore(
+            "MotoGP 2026 Hungary Sprint Race 1080p WEB h264-BILLIE",
+            evt);
+        var czechiaScore = scorer.CalculateMatchScore(
+            "MotoGP.2026.Round09.Czechia.Sprint.WEB-DL.1080p.H264.English-MWR.mkv",
+            evt);
+
+        hungaryScore.Should().BeGreaterThanOrEqualTo(ReleaseMatchScorer.MinimumMatchScore);
+        czechiaScore.Should().Be(0);
+    }
 }

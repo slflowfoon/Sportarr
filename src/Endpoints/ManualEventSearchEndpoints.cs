@@ -183,10 +183,11 @@ app.MapPost("/api/event/{eventId:int}/search", async (
     // If no cache hit, query indexers
     if (!usedCache)
     {
-        // OPTIMIZATION: Intelligent fallback search (matches AutomaticSearchService)
-        // Try primary query first, only fallback if insufficient results
+        // Try broader fallbacks until enough releases actually match this event.
+        // Counting raw results can stop too early when an indexer returns unrelated
+        // releases (for example Round09 results for a Round08 query).
         int queriesAttempted = 0;
-        const int MinimumResults = 10; // Minimum results before stopping (manual search wants more options)
+        const int MinimumMatchingResults = 10;
 
         foreach (var query in queries)
         {
@@ -218,30 +219,27 @@ app.MapPost("/api/event/{eventId:int}/search", async (
                 }
             }
 
-            // Success criteria: Found enough results for user to choose from
-            if (allResults.Count >= MinimumResults)
+            var matchingResultCount = allResults.Count(result =>
+                releaseMatchScorer.CalculateMatchScore(result.Title, evt) >= ReleaseMatchScorer.MinimumMatchScore);
+
+            // Success criteria: Found enough event-relevant results for the user to choose from.
+            if (matchingResultCount >= MinimumMatchingResults)
             {
-                logger.LogInformation("[SEARCH] Found {Count} results - skipping remaining {Remaining} fallback queries (rate limit optimization)",
-                    allResults.Count, queries.Count - queriesAttempted);
+                logger.LogInformation(
+                    "[SEARCH] Found {MatchingCount} matching results ({RawCount} raw) - skipping remaining {Remaining} fallback queries",
+                    matchingResultCount, allResults.Count, queries.Count - queriesAttempted);
                 break;
             }
 
-            // Log progress if we found some results but not enough
-            if (allResults.Count > 0 && allResults.Count < MinimumResults)
+            if (allResults.Count > 0)
             {
-                logger.LogInformation("[SEARCH] Found {Count} results (below minimum {Min}) - trying next query",
-                    allResults.Count, MinimumResults);
+                logger.LogInformation(
+                    "[SEARCH] Found {MatchingCount} matching results ({RawCount} raw), below minimum {Min} - trying next query",
+                    matchingResultCount, allResults.Count, MinimumMatchingResults);
             }
-            else if (allResults.Count == 0)
+            else
             {
                 logger.LogWarning("[SEARCH] No results for query '{Query}' - trying next fallback", query);
-            }
-
-            // Hard limit: Stop at 100 total results
-            if (allResults.Count >= 100)
-            {
-                logger.LogInformation("[SEARCH] Reached 100 results limit");
-                break;
             }
         }
 
