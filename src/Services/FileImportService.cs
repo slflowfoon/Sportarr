@@ -318,6 +318,24 @@ public class FileImportService : IFileImportService
                 _db.EventFiles.Remove(upgradedFile);
             }
 
+            // BuildDestinationPath is intentionally side-effect free. Only remove a
+            // stale destination after the upgrade decision has accepted this import.
+            // Otherwise an equal/lower-quality duplicate can delete the existing
+            // library file before being rejected as "not an upgrade".
+            if (File.Exists(destinationPath))
+            {
+                _logger.LogWarning("[Import] Accepted import is replacing existing destination file: {Path}", destinationPath);
+                try
+                {
+                    File.Delete(destinationPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[Import] Failed to delete existing file at destination: {Path}", destinationPath);
+                    throw new Exception($"Cannot import: destination file exists and could not be deleted: {destinationPath}");
+                }
+            }
+
             // Check free space
             if (!settings.SkipFreeSpaceCheck)
             {
@@ -693,22 +711,6 @@ public class FileImportService : IFileImportService
         // Note: We don't check for same source/destination here because FileImportService
         // imports from download client folders, not from the library itself.
         // The same-path check is only needed in LibraryImportService for manual re-imports.
-
-        // If destination file already exists, delete it.
-        // Never create numbered duplicates like (1), (2).
-        if (File.Exists(destinationPath))
-        {
-            _logger.LogWarning("[Import] Destination file already exists, deleting: {Path}", destinationPath);
-            try
-            {
-                File.Delete(destinationPath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[Import] Failed to delete existing file at destination: {Path}", destinationPath);
-                throw new Exception($"Cannot import: destination file exists and could not be deleted: {destinationPath}");
-            }
-        }
 
         return destinationPath;
     }
