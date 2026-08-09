@@ -58,6 +58,8 @@ public class ReleaseMatchScorer
             { "Silverstone", "Brands Hatch", "Donington" } },
         { "UK", new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "Silverstone", "Brands Hatch", "Donington" } },
+        { "United Kingdom", new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "Silverstone", "Brands Hatch", "Donington" } },
         { "Great Britain", new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "Silverstone", "Brands Hatch", "Donington" } },
 
@@ -852,7 +854,7 @@ public class ReleaseMatchScorer
             { "Abu Dhabi", new[] { "AbuDhabi", "Yas Marina" } },
             { "Monaco", new[] { "Monte Carlo", "Monegasque" } },
             { "Austria", new[] { "Austrian", "Spielberg", "Red Bull Ring" } },
-            { "Britain", new[] { "British", "Silverstone", "UK", "Great Britain" } },
+            { "Britain", new[] { "British", "Silverstone", "UK", "United Kingdom", "Great Britain" } },
             { "Italy", new[] { "Italian", "Monza", "Imola", "Mugello", "Misano" } },
             { "Belgium", new[] { "Belgian", "Spa", "Spa-Francorchamps" } },
             { "Japan", new[] { "Japanese", "Suzuka", "Motegi", "Fuji" } },

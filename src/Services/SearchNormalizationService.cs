@@ -26,7 +26,8 @@ public static class SearchNormalizationService
         { "Abu Dhabi", new[] { "AbuDhabi", "Yas Marina", "Fight Island", "UFC Fight Island" } },
         { "Monte Carlo", new[] { "Monaco", "Monegasque" } },
         { "Spielberg", new[] { "Austria", "Austrian" } },
-        { "Silverstone", new[] { "British", "Britain", "UK", "Great Britain" } },
+        { "Silverstone", new[] { "British", "Britain", "UK", "United Kingdom", "Great Britain" } },
+        { "United Kingdom", new[] { "UK", "Great Britain", "Britain", "British", "Silverstone" } },
         { "Monza", new[] { "Italy", "Italian" } },
         { "Spa", new[] { "Belgium", "Belgian", "Spa-Francorchamps" } },
         { "Suzuka", new[] { "Japan", "Japanese" } },
@@ -83,7 +84,7 @@ public static class SearchNormalizationService
         { "Argentinian", new[] { "Argentina", "Termas de Rio Hondo" } },
 
         // Europe
-        { "British", new[] { "Britain", "UK", "Great Britain", "Silverstone" } },
+        { "British", new[] { "Britain", "UK", "United Kingdom", "Great Britain", "Silverstone" } },
         { "Italian", new[] { "Italy", "Monza", "Imola", "Mugello" } },
         { "Spanish", new[] { "Spain", "Barcelona", "Catalunya" } },
         { "French", new[] { "France", "Le Mans" } },
