@@ -830,13 +830,24 @@ public class SportarrApiClient
                 return null;
             }
 
-            // Build dictionary mapping ExternalId (event ID) to episode number
+            // Index both hub short IDs and legacy TheSportsDB IDs so older
+            // local rows still receive the hub-authoritative episode number.
             var episodeMap = new Dictionary<string, int>();
             foreach (var ep in result.Episodes)
             {
-                if (!string.IsNullOrEmpty(ep.Id) && ep.EpisodeNumber.HasValue)
+                if (!ep.EpisodeNumber.HasValue)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(ep.Id))
                 {
                     episodeMap[ep.Id] = ep.EpisodeNumber.Value;
+                }
+
+                if (!string.IsNullOrEmpty(ep.TsdbId))
+                {
+                    episodeMap[ep.TsdbId] = ep.EpisodeNumber.Value;
                 }
             }
 
@@ -872,6 +883,9 @@ public class PlexEpisode
 {
     [JsonPropertyName("id")]
     public string? Id { get; set; }
+
+    [JsonPropertyName("tsdb_id")]
+    public string? TsdbId { get; set; }
 
     [JsonPropertyName("title")]
     public string? Title { get; set; }
