@@ -80,6 +80,8 @@ public class SportarrDbContext : DbContext
             entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Sport).IsRequired().HasMaxLength(100);
             entity.Property(e => e.ExternalId).HasMaxLength(50);
+            // TsdbId is only used to match legacy rows during API sync.
+            entity.Ignore(e => e.TsdbId);
             // DateEventFallback is only used during API deserialization, not stored in DB
             entity.Ignore(e => e.DateEventFallback);
             // Image URL fields are only used during API deserialization, not stored in DB

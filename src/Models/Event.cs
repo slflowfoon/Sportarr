@@ -90,6 +90,13 @@ public class Event
     [JsonPropertyName("idEvent")]
     public string? ExternalId { get; set; }
 
+    /// <summary>
+    /// Legacy TheSportsDB event ID supplied alongside the hub event ID.
+    /// Used during sync to match rows created before hub IDs were introduced.
+    /// </summary>
+    [JsonPropertyName("tsdbId")]
+    public string? TsdbId { get; set; }
+
     [JsonPropertyName("strEvent")]
     public required string Title { get; set; }
 

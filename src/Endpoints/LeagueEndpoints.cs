@@ -1702,6 +1702,7 @@ app.MapPost("/api/leagues/{id:int}/refresh-events", async (
 // API: Manually recalculate episode numbers for a league (useful for fixing incorrect numbering)
 app.MapPost("/api/leagues/{id:int}/recalculate-episodes", async (
     int id,
+    string? season,
     SportarrDbContext db,
     FileRenameService fileRenameService,
     ILogger<Program> logger) =>
@@ -1723,6 +1724,13 @@ app.MapPost("/api/leagues/{id:int}/recalculate-episodes", async (
             .Distinct()
             .ToListAsync();
 
+        if (!string.IsNullOrWhiteSpace(season))
+        {
+            seasons = seasons
+                .Where(candidate => string.Equals(candidate, season, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
         if (!seasons.Any())
         {
             return Results.Ok(new { success = true, message = "No seasons found to recalculate", renumberedCount = 0, renamedCount = 0 });
@@ -1731,26 +1739,26 @@ app.MapPost("/api/leagues/{id:int}/recalculate-episodes", async (
         int totalRenumbered = 0;
         int totalFilesRenamed = 0;
 
-        foreach (var season in seasons)
+        foreach (var seasonName in seasons)
         {
-            if (!string.IsNullOrEmpty(season))
+            if (!string.IsNullOrEmpty(seasonName))
             {
-                logger.LogInformation("[LEAGUES] Recalculating episode numbers for season {Season}", season);
+                logger.LogInformation("[LEAGUES] Recalculating episode numbers for season {Season}", seasonName);
 
-                var renumbered = await fileRenameService.RecalculateEpisodeNumbersAsync(id, season);
+                var renumbered = await fileRenameService.RecalculateEpisodeNumbersAsync(id, seasonName);
                 totalRenumbered += renumbered;
 
                 if (renumbered > 0)
                 {
-                    logger.LogInformation("[LEAGUES] Renumbered {Count} events in season {Season}", renumbered, season);
+                    logger.LogInformation("[LEAGUES] Renumbered {Count} events in season {Season}", renumbered, seasonName);
 
                     // Also rename files to reflect new episode numbers
-                    var renamed = await fileRenameService.RenameAllFilesInSeasonAsync(id, season);
+                    var renamed = await fileRenameService.RenameAllFilesInSeasonAsync(id, seasonName);
                     totalFilesRenamed += renamed;
 
                     if (renamed > 0)
                     {
-                        logger.LogInformation("[LEAGUES] Renamed {Count} files in season {Season}", renamed, season);
+                        logger.LogInformation("[LEAGUES] Renamed {Count} files in season {Season}", renamed, seasonName);
                     }
                 }
             }

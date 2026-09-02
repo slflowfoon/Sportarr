@@ -244,8 +244,9 @@ public class LeagueEventSyncService
 
             // Remove events that the API no longer returns (cancelled/deleted from schedule)
             var apiExternalIds = events
-                .Select(e => e.ExternalId)
+                .SelectMany(e => new[] { e.ExternalId, e.TsdbId })
                 .Where(id => !string.IsNullOrEmpty(id))
+                .Select(id => id!)
                 .ToHashSet();
 
             var localEventsQuery = _db.Events
@@ -386,9 +387,18 @@ public class LeagueEventSyncService
     /// <param name="apiEpisodeMap">Episode numbers from sportarr.net API (ExternalId -> EpisodeNumber). If null, falls back to local calculation.</param>
     private async Task ProcessEventAsync(Event apiEvent, League league, LeagueEventSyncResult result, string currentSeason, Dictionary<string, int>? apiEpisodeMap = null)
     {
-        // Check if event already exists by ExternalId
+        // Match both current hub IDs and legacy TheSportsDB IDs. Existing rows
+        // retain their original ID so file links and monitoring state survive.
+        var apiEventIds = new[] { apiEvent.ExternalId, apiEvent.TsdbId }
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Select(id => id!)
+            .Distinct()
+            .ToList();
+
         var existingEvent = await _db.Events
-            .FirstOrDefaultAsync(e => e.ExternalId == apiEvent.ExternalId);
+            .FirstOrDefaultAsync(e => e.LeagueId == league.Id &&
+                                      e.ExternalId != null &&
+                                      apiEventIds.Contains(e.ExternalId));
 
         if (existingEvent != null)
         {

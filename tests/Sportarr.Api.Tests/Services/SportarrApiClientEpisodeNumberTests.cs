@@ -85,6 +85,73 @@ public class SportarrApiClientEpisodeNumberTests
         }
     }
 
+    [Fact]
+    public async Task GetLeagueSeasonAsync_PreservesLegacyEventIdForSyncMatching()
+    {
+        const string responseBody = """
+            {
+              "data": {
+                "schedule": [
+                  {
+                    "idEvent": "ev-361479",
+                    "tsdbId": "2368487",
+                    "strEvent": "Aragon - Sprint Race",
+                    "strSport": "Motorsport",
+                    "strSeason": "2026",
+                    "strTimestamp": "2026-08-29T13:00:00+00:00",
+                    "dateEvent": "2026-08-29"
+                  }
+                ]
+              }
+            }
+            """;
+
+        using var handler = new StubHttpMessageHandler(request =>
+        {
+            request.RequestUri.Should().Be(
+                new Uri("https://metadata.example/api/v2/json/schedule/league/4407/2026"));
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
+            };
+        });
+        using var httpClient = new HttpClient(handler);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+
+        var dataPath = Path.Combine(Path.GetTempPath(), $"sportarr-tests-{Guid.NewGuid():N}");
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Sportarr:DataPath"] = dataPath,
+                ["SportarrApi:BaseUrl"] = "https://metadata.example/api/v2/json"
+            })
+            .Build();
+        var configService = new ConfigService(configuration, NullLogger<ConfigService>.Instance);
+        var client = new SportarrApiClient(
+            httpClient,
+            NullLogger<SportarrApiClient>.Instance,
+            configuration,
+            configService,
+            cache);
+
+        try
+        {
+            var result = await client.GetLeagueSeasonAsync("4407", "2026");
+
+            result.Should().ContainSingle();
+            result![0].ExternalId.Should().Be("ev-361479");
+            result[0].TsdbId.Should().Be("2368487");
+        }
+        finally
+        {
+            if (Directory.Exists(dataPath))
+            {
+                Directory.Delete(dataPath, recursive: true);
+            }
+        }
+    }
+
     private sealed class StubHttpMessageHandler(
         Func<HttpRequestMessage, HttpResponseMessage> responseFactory) : HttpMessageHandler
     {
